@@ -2,10 +2,10 @@ from collections import defaultdict
 import heapq as hq
 from copy import copy
 
-
 class State:
     def __init__(self) -> None:
         self.position = "AA"
+        self.elephant = "AA"
         self.minutes = 30
         self.open = ""
         self.total_flow = 0
@@ -17,10 +17,9 @@ class State:
         future_potential = 0
         for node, dist in distances[self.position].items():
             if node not in self.open:
-                future_potential += (self.minutes - dist - 1) * valve_rates[node]
+                future_potential += (self.minutes - 1) * valve_rates[node]
 
         return self.total_flow + future_potential
-
 
     def __repr__(self) -> str:
         return f"<{self.position}, {self.minutes}, {self.open}, {self.total_flow}>"
@@ -80,10 +79,7 @@ def all_pairs_shortest(neighbors) -> dict[str, dict[str, int]]:
 
     return dist
 
-    
-
-
-def part1(filename):
+def part1(filename, helper=False):
     valve_rates, neighbors = read_input(filename)
 
     state = State()
@@ -97,7 +93,7 @@ def part1(filename):
         state_max_flow, state = hq.heappop(heap)
         if state.total_flow > best.total_flow:
             best = state
-        elif (-state_max_flow) <= best.total_flow:
+        elif (-state_max_flow) < best.total_flow:
             break
 
         for new_state in transitions(state, distances, valve_rates):
