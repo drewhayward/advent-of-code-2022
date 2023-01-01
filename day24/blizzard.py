@@ -26,9 +26,13 @@ def read_input(filename) -> tuple[list[tuple[int,int,str]], int, int]:
 
 def walkable_neighbors(x: int, y: int, width: int, height: int, occupied: set[tuple[int,int]]):
     if x == 0 and y == -1:
-        yield (0, 0)
+        if (0, 0) not in occupied:
+            yield (0, 0)
         yield (0, -1)
         return
+
+    if x == width - 1 and y == height - 1:
+        yield (width - 1, height)
     
     if x == 0 and y == 0:
         yield (0, -1)
@@ -48,7 +52,7 @@ def walkable_neighbors(x: int, y: int, width: int, height: int, occupied: set[tu
 
 
 
-def navigate_blizzard(winds: list[tuple[int, int, str]], width: int, height: int):
+def navigate_blizzard(winds: list[tuple[int, int, str]], width: int, height: int, goal: tuple[int, int], start: tuple[int, int], start_minute: int = 0):
     @lru_cache
     def winds_at_minute(minute: int) -> set[tuple[int, int]]:
         # get wind postions for the next minute
@@ -60,21 +64,21 @@ def navigate_blizzard(winds: list[tuple[int, int, str]], width: int, height: int
             ny = (y + minute * dy) % height
             occupied[(nx, ny)].append(dir)
 
-        for y in range(height):
-            for x in range(width):
-                if (x, y) not in occupied:
-                    print(".", end='')
-                elif len(occupied[(x,y)]) == 1:
-                    print(occupied[(x,y)][0], end='')
-                else:
-                    print(len(occupied[(x,y)]), end='')
-            print()
+        # for y in range(height):
+        #     for x in range(width):
+        #         if (x, y) not in occupied:
+        #             print(".", end='')
+        #         elif len(occupied[(x,y)]) == 1:
+        #             print(occupied[(x,y)][0], end='')
+        #         else:
+        #             print(len(occupied[(x,y)]), end='')
+        #     print()
                 
 
         return occupied
 
     # BFS search though blizzard spacetime
-    frontier = deque([(0, -1, 0, None)])
+    frontier = deque([(start[0], start[1], start_minute, None)])
     visited = set()
     best = 0
     parents = {}
@@ -87,8 +91,10 @@ def navigate_blizzard(winds: list[tuple[int, int, str]], width: int, height: int
         x, y, minutes, parent = node
         parents[(x, y, minutes)] = parent
 
-        if (x, y) == (width - 1, height - 1):
-            best = minutes + 1
+        assert (x, y) not in winds_at_minute(minutes)
+
+        if (x, y) == goal:
+            best = minutes
             break
 
         for nx, ny in walkable_neighbors(x, y, width, height, winds_at_minute(minutes + 1)):
@@ -96,23 +102,32 @@ def navigate_blizzard(winds: list[tuple[int, int, str]], width: int, height: int
             frontier.append((nx, ny, minutes + 1, (x, y, minutes)))
 
     # Reconstruct path
-    path = []
-    curr = (x, y, minutes)
-    while curr is not None:
-        path.append(curr)
-        curr = parents[curr]
+    # path = []
+    # curr = (x, y, minutes)
+    # while curr is not None:
+    #     path.append(curr)
+    #     curr = parents[curr]
 
-    path.reverse()
-    pprint(path)
+    # path.reverse()
+    # pprint(path)
     
     return best
         
 def part1(filename):
     winds, width, height = read_input(filename)
-    mins  = navigate_blizzard(winds, width, height)
+    mins  = navigate_blizzard(winds, width, height, goal=(width - 1, height), start=(0, -1))
     print(mins)
 
+def part2(filename):
+    winds, width, height = read_input(filename)
+    start, end = (0, -1), (width - 1, height)
+    min1  = navigate_blizzard(winds, width, height, goal=end, start=start)
+    min2  = navigate_blizzard(winds, width, height, goal=start, start=end, start_minute=min1)
+    min3  = navigate_blizzard(winds, width, height, goal=end, start=start, start_minute=min2)
+    print(min1, min2, min3)
 
 if __name__ == "__main__":
     part1('test.txt')
+    part2('test.txt')
     part1('input.txt')
+    part2('input.txt')
